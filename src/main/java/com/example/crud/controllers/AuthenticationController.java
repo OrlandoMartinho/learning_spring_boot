@@ -11,9 +11,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import jakarta.validation.Valid;
 import org.springframework.security.authentication.AuthenticationManager;
 import com.example.crud.domain.user.AuthenticationDTO;
+import com.example.crud.domain.user.LoginResponseDTO;
 import com.example.crud.domain.user.RegisterDTO;
 import com.example.crud.domain.user.User;
 import com.example.crud.repositories.UserRepository;
+import com.example.crud.infra.security.TokenService;
+
 
 @RestController
 @RequestMapping("/auth")
@@ -25,6 +28,9 @@ public class AuthenticationController {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private TokenService tokenService;
+
     @PostMapping("/login")
     public ResponseEntity login(@RequestBody @Valid AuthenticationDTO data) {
 
@@ -34,7 +40,9 @@ public class AuthenticationController {
         );
 
         var auth = this.authenticationManager.authenticate(usernamePassword);
-        return ResponseEntity.ok().build();
+
+        var token = tokenService.generateToken((User) auth.getPrincipal());
+        return ResponseEntity.ok(new LoginResponseDTO(token));
     }
 
     @PostMapping("/register")
@@ -51,6 +59,8 @@ public class AuthenticationController {
         );
 
         this.userRepository.save(user);
+
+
 
         return ResponseEntity.ok().build();
     }   
