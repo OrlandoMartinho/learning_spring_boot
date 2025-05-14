@@ -1,5 +1,9 @@
 package com.example.crud.infra.security;
 
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -9,51 +13,31 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.example.crud.repositories.UserRepository;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse; 
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
 import java.io.IOException;
 
 @Component
 public class SecurityFilter extends OncePerRequestFilter {
-
-   
     @Autowired
-
-    private TokenService tokenService;
-
+    TokenService tokenService;
     @Autowired
-
-    private UserRepository userRepository;
+    UserRepository userRepository;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-            throws ServletException, IOException {
-      var  token = this.recoverToken(request);
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+        var token = this.recoverToken(request);
+        if(token != null){
+            var login = tokenService.validateToken(token);
+            UserDetails user = userRepository.findByLogin(login);
 
-      if(token != null) {
-            
-        var login = tokenService.validateToken(token);
-
-        UserDetails user = userRepository.findByLogin(login);
-        var authentication =new UsernamePasswordAuthenticationToken(
-            user,
-            null,
-            user.getAuthorities()
-        );
-
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        
-     }
-    filterChain.doFilter(request, response);
-
+            var authentication = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+        }
+        filterChain.doFilter(request, response);
     }
 
-    private String recoverToken(HttpServletRequest request) {
-            var token = request.getHeader("Authorization");
-            if (token == null || token.isEmpty() || !token.startsWith("Bearer ")) return null;
-            return token.replace("Bearer", "");
-        }
-    
+    private String recoverToken(HttpServletRequest request){
+        var authHeader = request.getHeader("Authorization");
+        if(authHeader == null) return null;
+        return authHeader.replace("Bearer ", "");
+    }
 }

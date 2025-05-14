@@ -1,7 +1,6 @@
 package com.example.crud.domain.user;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 
 import org.springframework.security.core.GrantedAuthority;
